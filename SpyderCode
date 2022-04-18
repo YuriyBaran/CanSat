@@ -1,1 +1,115 @@
+# ------------ CREADOR DEL CODIGO ------------
+# 
+#              Yuriy Baran Yakymiv
+# 
+#             yuriybaran@outlook.com              
+# 
+# --------------------------------------------
 
+# ------------ importar librerias ------------
+import serial
+from datetime import datetime, timedelta
+import requests
+import json
+import re
+import csv
+from azure.storage.blob import AppendBlobService
+
+# ------------ variables ------------
+ultima_entrada = 0
+paquete = 0
+
+# ------------ link a streaming database ------------
+url = "https://api.powerbi.com/beta/b2bb7a15-9a28-45ae-a6ed-321440cddda9/datasets/af673fbf-7816-444d-b2ae-fd400d88a556/rows?key=tPlFU9Q8ceLSev3Oke2hfUoxZU1ujssqJqsDKGftrhePR6JbB7ggJu2Q0W5ABRFlQS4M5PrKugS2LsACDomxFA%3D%3D"
+
+# ------------ parametros temporales ESP ------------
+cambio_hora = timedelta(hours= -1)
+
+# ------------ leer puerto serie ------------
+ENTRADA = serial.Serial("COM5",9600)
+
+# ------------ procesado y exportacion de datos ------------
+while True: # bucle infinito
+    # marcas temporales
+    nowESP = datetime.strftime(
+        datetime.now(),
+        "%Y-%m-%dT%H:%M:%S"
+        )
+    nowUTC = datetime.strftime(
+        datetime.now() + cambio_hora,
+        "%Y-%m-%dT%H:%M:%S"
+        )
+    
+    # asignamos paquetes de puerto serie a variable
+    paquete = ENTRADA.readline()
+    
+    # comprueba si hay datos nuevos para evitar repeticion de paquetes
+    if paquete == ultima_entrada: 
+        continue                       
+    ultima_entrada = paquete
+    
+    # lista a partir del paquete
+    LISTA = str(paquete).split(";")
+    
+    print(str(paquete)) #imprimimos en consola los datos
+    
+    # comprobación de que el paquete sea de datos y no este corrupto
+    if str(LISTA[len(LISTA) - 1]) == "PYTHON\\r\\n'":
+        
+        print("enviado correctamente ------------------------")
+        
+        #asignado datos de puerto serie a variables
+        temperatura = str(LISTA[1])
+        presion = str(LISTA[2])               
+        altitud = str(LISTA[3])
+        N_paquete = str(re.sub("b'","",LISTA[0]))
+        
+        # preparación datos en diccionario para envio
+        data = [                                
+          {
+            "temperatura": temperatura,
+            "presion": presion,
+            "altitud": altitud,
+            "N_paquete": N_paquete,
+            "timeUTC": nowUTC,
+            "timeESP": nowESP
+            }
+          ]
+        
+        headers = {
+          "Content-Type": "application/json"
+          }
+        
+        # enviado de datos
+        response = requests.request(
+            method="POST",
+            url=url,                             
+            headers=headers,
+            data=json.dumps(data)
+            )
+        
+        LISTA.pop(-1)
+        LISTA.append(nowUTC)
+        LISTA.append(nowESP)
+        
+        # guardado de datos en csv local
+        with open('CANSAT_DATOS.csv', "a", newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=";")
+            writer.writerow(LISTA)
+        csvfile.close()
+        
+        # guardado de datos en nuve de ficheros Blob storage
+        def append_data_to_blob(data):
+            #por razones de seguridad la siguiente clave(account_key) no debe compartirse a la ligera
+            service = AppendBlobService(account_name="cuentacansat", 
+            account_key="ASLkoA3WPjXtCEWNaJKSNFNHtsvV+phHznoeS2AnLlQlDEdKATCSrfM3ycznChxXz+LsyXrbj7kpKFItlShCqw==")
+            service.append_blob_from_text(container_name="containercansat", blob_name="datos.csv", text = data)
+            
+            # en el caso de eliminacion de csv base utilizar el siguiente codigo comentado para restaura el fichero plano ----->
+            # service.create_blob(container_name="containercansat", blob_name='datos.csv') #crea csv
+            # service.append_blob_from_text(container_name="containercansat", blob_name="datos.csv", text = "n_paquete;temperatura;presion;altitud;tiempo_UST;tiempo_ESP")
+        # subida de datos a la nuve
+        append_data_to_blob("\n"+";".join(LISTA))
+    
+    else:
+        continue
