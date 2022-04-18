@@ -20,7 +20,7 @@ ultima_entrada = 0
 paquete = 0
 
 # ------------ link a streaming database ------------
-url = "https://api.powerbi.com/beta/b2bb7a15-9a28-45ae-a6ed-321440cddda9/datasets/af673fbf-7816-444d-b2ae-fd400d88a556/rows?key=tPlFU9Q8ceLSev3Oke2hfUoxZU1ujssqJqsDKGftrhePR6JbB7ggJu2Q0W5ABRFlQS4M5PrKugS2LsACDomxFA%3D%3D"
+url = "################"
 
 # ------------ parametros temporales ESP ------------
 cambio_hora = timedelta(hours= -1)
@@ -102,7 +102,7 @@ while True: # bucle infinito
         def append_data_to_blob(data):
             #por razones de seguridad la siguiente clave(account_key) no debe compartirse a la ligera
             service = AppendBlobService(account_name="cuentacansat", 
-            account_key="ASLkoA3WPjXtCEWNaJKSNFNHtsvV+phHznoeS2AnLlQlDEdKATCSrfM3ycznChxXz+LsyXrbj7kpKFItlShCqw==")
+            account_key="#########################")
             service.append_blob_from_text(container_name="containercansat", blob_name="datos.csv", text = data)
             
             # en el caso de eliminacion de csv base utilizar el siguiente codigo comentado para restaura el fichero plano ----->
