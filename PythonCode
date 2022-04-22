@@ -107,7 +107,7 @@ while True: # bucle infinito
             
             # en el caso de eliminacion de csv base utilizar el siguiente codigo comentado para restaura el fichero plano ----->
             # service.create_blob(container_name="containercansat", blob_name='datos.csv') #crea csv
-            # service.append_blob_from_text(container_name="containercansat", blob_name="datos.csv", text = "n_paquete;temperatura;presion;altitud;tiempo_UST;tiempo_ESP")
+            # service.append_blob_from_text(container_name="containercansat", blob_name="datos.csv", text = "n_paquete;temperatura;presion;altitud;tiempo_UTC;tiempo_ESP")
         # subida de datos a la nuve
         append_data_to_blob("\n"+";".join(LISTA))
     
